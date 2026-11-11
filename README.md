@@ -6,7 +6,15 @@ It works for any photo taken **head on** to a surface: a table seen from above, 
 
 ## Run it
 
-Python 3.10 or newer.
+Python 3.10 or newer must be installed. Then start ImageMixer with one click:
+
+- **Windows:** double-click `ImageMixer.bat`
+- **macOS:** double-click `ImageMixer.command` (the first time, run `chmod +x ImageMixer.command` once in Terminal; downloaded files lose their executable flag, and macOS may ask you to allow it in System Settings > Privacy & Security)
+- **Linux:** run `./ImageMixer.sh`
+
+The first launch creates a private environment in `.venv` and installs the packages, which takes a minute or two; later launches start in seconds. The browser opens by itself. Close the window to stop. `python launch.py --full` also installs the optional trained models (see below).
+
+To run it by hand instead:
 
 ```
 pip install -r requirements.txt

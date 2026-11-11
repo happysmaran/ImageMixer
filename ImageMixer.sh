@@ -1,0 +1,7 @@
+#!/bin/sh
+# Start ImageMixer on Linux (and anywhere else with a POSIX shell). All the work happens in launch.py.
+cd "$(dirname "$0")" || exit 1
+for py in python3 python; do
+  if command -v "$py" >/dev/null 2>&1; then exec "$py" launch.py "$@"; fi
+done
+echo "Python 3.10 or newer is required (try: sudo apt install python3 python3-venv)."
