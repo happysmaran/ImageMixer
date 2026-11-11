@@ -1,0 +1,2 @@
+onnxruntime>=1.17   # trained cutout
+torch>=2.1          # trained inpainting for the surface extender (~200 MB model, downloaded on first use)

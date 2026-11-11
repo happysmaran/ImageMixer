@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ImageMixer</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<section id="start">
+  <div class="start-inner">
+    <h1>ImageMixer</h1>
+    <p class="lede">Move an object from one photo into another, with the scale, light, shadow and perspective of the photo it lands in.</p>
+    <div class="drops">
+      <label class="drop" id="dropScene">
+        <input type="file" accept="image/*" id="fileScene">
+        <span class="drop-title">The scene</span>
+        <span class="drop-hint">The photo the object goes into</span>
+        <img alt="" id="thumbScene" hidden>
+      </label>
+      <label class="drop" id="dropObject">
+        <input type="file" accept="image/*" id="fileObject">
+        <span class="drop-title">The object</span>
+        <span class="drop-hint">A photo of the object on any background</span>
+        <img alt="" id="thumbObject" hidden>
+      </label>
+    </div>
+    <div class="start-actions">
+      <button id="go" class="primary" disabled>Open in editor</button>
+      <span id="startMsg" role="status"></span>
+    </div>
+    <p class="fine">Everything runs on this computer. The photos are not uploaded anywhere.</p>
+  </div>
+</section>
+
+<div id="editor" hidden>
+  <main id="stage">
+    <div id="frame">
+      <img id="view" alt="Composite preview" draggable="false">
+      <img id="behindLayer" alt="" hidden>
+      <canvas id="strokeLayer" hidden></canvas>
+      <div id="hit"></div>
+      <div id="box" hidden></div>
+      <div id="markers"></div>
+    </div>
+    <div id="banner" hidden></div>
+    <div id="status" role="status"></div>
+  </main>
+
+  <aside id="panel" aria-label="Controls">
+    <details open>
+      <summary>Object</summary>
+      <div class="group">
+        <label class="row"><span>Preset</span><select id="device"></select></label>
+        <div class="row two">
+          <label><span>Length (mm)</span><input type="number" id="lengthMm" min="1" step="0.1"></label>
+          <label><span>Thickness (mm)</span><input type="number" id="thickMm" min="0.1" step="0.1"></label>
+        </div>
+        <div class="row two">
+          <label><span>Shape</span>
+            <select id="shape">
+              <option value="flat">Flat (print, sticker)</option>
+              <option value="slab">Straight sides (box, can)</option>
+              <option value="round">Rounded (ball, dome)</option>
+            </select></label>
+          <label><span>Finish</span>
+            <select id="finish">
+              <option value="matte">Matte</option>
+              <option value="glossy">Glossy</option>
+              <option value="metal">Metal</option>
+              <option value="fabric">Fabric</option>
+              <option value="glass">Glass (placeholder)</option>
+            </select></label>
+        </div>
+        <label class="row"><span>Gap between the object and the surface (mm)</span><input type="number" id="standoffMm" min="0" step="0.5"></label>
+        <div id="glassBox" hidden>
+          <p class="note">Glass is drawn as a see-through stand-in. Refraction is not modelled, so treat it as a marker.</p>
+          <div class="group" id="gGlass"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="flipH"> Mirror the object left to right</label>
+        <p class="note" id="cutNote"></p>
+        <button id="fixCut" class="quiet">Fix the cutout…</button>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Placement</summary>
+      <div class="group" id="gPlace"></div>
+      <div class="group">
+        <button id="toolScale" class="quiet">Set scale from something in the photo…</button>
+        <div class="note" id="scaleNote">Drag the object to move it, scroll over it to resize.</div>
+        <button id="applyReal" class="quiet" hidden>Resize to real size</button>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Light and shadow</summary>
+      <div class="group">
+        <p class="note" id="lightInfo"></p>
+        <div class="notice" id="lightNote" hidden><span id="lightNoteText"></span> <button id="flipFix" class="quiet" hidden>Mirror the object</button></div>
+        <button id="useMeasured" class="quiet">Use the light measured from the photo</button>
+        <div class="dial-wrap">
+          <svg id="dial" viewBox="-60 -60 120 120" role="slider" aria-label="Light direction" tabindex="0">
+            <circle r="46" class="dial-ring"/>
+            <line id="dialRay" x1="0" y1="0" x2="0" y2="0" class="dial-ray"/>
+            <circle id="dialSun" r="7" class="dial-sun"/>
+            <circle r="2.5" class="dial-hub"/>
+          </svg>
+          <div class="dial-text"><strong id="dialLabel"></strong><span>Drag the sun to set where the light comes from.</span></div>
+        </div>
+      </div>
+      <div class="group" id="gLight"></div>
+      <div class="group">
+        <div class="row swatchrow"><span>Shadow colour</span><i id="shadowSwatch" class="swatch"></i></div>
+        <button id="toolShadow" class="quiet">Sample from a shadow in the photo…</button>
+      </div>
+    </details>
+
+    <details>
+      <summary>Perspective</summary>
+      <div class="group">
+        <label class="check"><input type="checkbox" id="sideFaces"> Show the side of the object</label>
+        <label class="row"><span>Side material</span>
+          <select id="material">
+            <option value="plastic_over_steel">Plastic over steel</option>
+            <option value="black_plastic">Black plastic</option>
+            <option value="brushed_metal">Brushed metal</option>
+          </select></label>
+      </div>
+      <div class="group" id="gPersp"></div>
+    </details>
+
+    <details>
+      <summary>Tone</summary>
+      <div class="group" id="gTone"></div>
+    </details>
+
+    <details>
+      <summary>In front of the object</summary>
+      <div class="group">
+        <p class="note">Paint over anything in the scene that should hide the object, such as a leaf, a cable or another item's edge.</p>
+        <button id="toolBehind" class="quiet">Paint what stays in front…</button>
+        <div id="behindOpts" class="group" hidden>
+          <label class="check"><input type="checkbox" id="behindSnap" checked> Snap to edges</label>
+          <label class="check"><input type="checkbox" id="behindErase"> Erase instead</label>
+          <div class="slider"><label for="brush">Brush size</label><output id="brushOut"></output><input type="range" id="brush" min="3" max="200" step="1" value="30"></div>
+          <div class="row two"><button id="behindDone" class="quiet">Done</button><button id="behindClear" class="quiet">Clear all</button></div>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Canvas</summary>
+      <div class="group">
+        <p class="note">If the object does not fit, add more of the surface. This takes a while on large photos.</p>
+        <div class="row two">
+          <label><span>Side</span>
+            <select id="extSide"><option value="right">Right</option><option value="left">Left</option><option value="top">Top</option><option value="bottom">Bottom</option></select></label>
+          <label><span>Add (px)</span><input type="number" id="extPx" value="800" min="16" max="4000" step="50"></label>
+        </div>
+        <div class="row two">
+          <button id="extGo" class="quiet">Add surface</button>
+          <button id="extUndo" class="quiet" disabled>Undo</button>
+        </div>
+        <div id="extProg" class="prog" hidden><div></div></div>
+      </div>
+    </details>
+
+    <div class="panel-actions">
+      <button id="exportJpg" class="primary">Export JPEG</button>
+      <button id="exportPng">Export PNG</button>
+      <button id="resetAll" class="quiet">Reset</button>
+    </div>
+  </aside>
+</div>
+
+<dialog id="refDlg">
+  <form method="dialog">
+    <h2>How long is that?</h2>
+    <label class="row"><span>Reference</span><select id="refSel"></select></label>
+    <label class="row"><span>Length (mm)</span><input type="number" id="refMm" min="0.1" step="0.1"></label>
+    <div class="dlg-actions"><button value="cancel" class="quiet">Cancel</button><button value="ok" class="primary" id="refOk">Set scale</button></div>
+  </form>
+</dialog>
+
+<dialog id="cutDlg">
+  <form method="dialog">
+    <h2>Fix the cutout</h2>
+    <p class="note">Draw a box that tightly surrounds the object. The tinted area is what is kept.</p>
+    <div id="cutStage"><img id="cutImg" alt="Object photo with cutout" draggable="false"><div id="cutBox" hidden></div></div>
+    <div class="dlg-actions"><button value="cancel" class="quiet">Cancel</button><button value="ok" class="primary" id="cutOk" disabled>Cut out again</button></div>
+  </form>
+</dialog>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

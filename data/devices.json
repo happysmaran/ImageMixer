@@ -1,0 +1,36 @@
+{
+  "note": "Sizes are manufacturer figures as commonly published; edit freely, the app uses whatever is here. Fields left out fall back to: shape slab, standoff 0, finish glossy.",
+  "devices": [
+    {"id": "custom", "name": "Custom size", "length_mm": 100.0, "thickness_mm": 8.0,
+     "side_material": "black_plastic"},
+    {"id": "print_flat", "name": "Poster or print, flat on the wall", "length_mm": 600.0, "thickness_mm": 0.4,
+     "shape": "flat", "finish": "matte", "side_material": "black_plastic"},
+    {"id": "sticker", "name": "Sticker or label", "length_mm": 80.0, "thickness_mm": 0.2,
+     "shape": "flat", "finish": "glossy", "side_material": "black_plastic"},
+    {"id": "frame_hung", "name": "Framed picture, hung on a wall", "length_mm": 300.0, "thickness_mm": 22.0,
+     "shape": "slab", "standoff_mm": 8.0, "finish": "matte", "side_material": "black_plastic"},
+    {"id": "box", "name": "Box or book", "length_mm": 200.0, "thickness_mm": 35.0,
+     "shape": "slab", "finish": "matte", "side_material": "black_plastic"},
+    {"id": "can", "name": "Mug or can, seen from above", "length_mm": 85.0, "thickness_mm": 95.0,
+     "shape": "slab", "finish": "glossy", "side_material": "brushed_metal"},
+    {"id": "ball", "name": "Ball or dome", "length_mm": 70.0, "thickness_mm": 70.0,
+     "shape": "round", "finish": "matte", "side_material": "black_plastic"},
+    {"id": "glass", "name": "Glass or clear object (placeholder)", "length_mm": 100.0, "thickness_mm": 8.0,
+     "shape": "slab", "finish": "glass", "side_material": "black_plastic"},
+    {"id": "ipod_nano_1g", "name": "iPod nano (1st gen)", "length_mm": 90.0, "thickness_mm": 6.9,
+     "side_material": "plastic_over_steel", "clear_edge_frac": 0.011},
+    {"id": "ipod_shuffle_2g", "name": "iPod shuffle (2nd gen)", "length_mm": 41.2, "thickness_mm": 10.5,
+     "side_material": "brushed_metal", "finish": "metal"},
+    {"id": "iphone_4", "name": "iPhone 4 / 4S", "length_mm": 115.2, "thickness_mm": 9.3,
+     "side_material": "plastic_over_steel"},
+    {"id": "iphone_5", "name": "iPhone 5 / 5s", "length_mm": 123.8, "thickness_mm": 7.6,
+     "side_material": "brushed_metal", "finish": "metal"}
+  ],
+  "references": [
+    {"id": "card", "name": "Credit card (long edge)", "mm": 85.6},
+    {"id": "a4_long", "name": "A4 paper (long edge)", "mm": 297.0},
+    {"id": "letter_long", "name": "US Letter paper (long edge)", "mm": 279.4},
+    {"id": "us_quarter", "name": "US quarter (diameter)", "mm": 24.26},
+    {"id": "aa", "name": "AA battery (length)", "mm": 50.5}
+  ]
+}
