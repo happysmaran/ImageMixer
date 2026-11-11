@@ -161,6 +161,10 @@ function buildControls() {
     get: () => P().rim, set: (v) => { P().rim = v; }, def: () => D().rim });
   slider(tone, { label: 'Sheen', min: 0, max: 3, step: 0.01, fmt: f2,
     get: () => P().sheen, set: (v) => { P().sheen = v; }, def: () => D().sheen });
+  slider(tone, { label: 'Match scene colour', min: 0, max: 1, step: 0.05, fmt: f2,
+    get: () => P().color_match, set: (v) => { P().color_match = v; }, def: () => D().color_match });
+  slider(tone, { label: 'Match scene light falloff', min: 0, max: 1, step: 0.05, fmt: f2,
+    get: () => P().light_grad, set: (v) => { P().light_grad = v; }, def: () => D().light_grad });
   slider(tone, { label: 'Softness', min: 0, max: 3, step: 0.05, fmt: (v) => v.toFixed(2) + ' px',
     get: () => P().softness, set: (v) => { P().softness = v; }, def: () => D().softness });
   slider(tone, { label: 'Grain', min: 0, max: 6, step: 0.1, fmt: (v) => v.toFixed(1),

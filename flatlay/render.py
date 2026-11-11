@@ -20,6 +20,7 @@ import numpy as np
 
 from .cutout import Cutout
 from .model import Params
+from .surface import _surface_mask
 
 # (depth along the side face, multiplier of local surface colour, constant offset). Depth 0 is the edge shared
 # with the front face and 1 is where the object meets the surface.
@@ -106,6 +107,50 @@ def _local_surface(scene: np.ndarray, box: tuple, margin: int) -> np.ndarray:
     return np.median(px, axis=0)[::-1].astype(np.float32)
 
 
+def _illuminant(rgb_px: np.ndarray) -> np.ndarray:
+    """Colour of the light a photo was taken under, as a unit-mean RGB triple (shades-of-grey estimate).
+
+    Strongly coloured pixels (wood, cloth) are left out when enough neutral ones exist, because a large orange
+    surface would otherwise be read as an orange light and the correction would drain the colour from everything.
+    """
+    px = rgb_px.reshape(-1, 3).astype(np.float32)
+    px = px[(px.max(1) > 25) & (px.max(1) < 245)]
+    if len(px) < 200:
+        return np.ones(3, np.float32)
+    sat = (px.max(1) - px.min(1)) / np.maximum(px.max(1), 1.0)
+    neutral = px[sat < 0.35]
+    if len(neutral) >= 0.03 * len(px) and len(neutral) >= 200:
+        px = neutral
+    ill = np.power(np.mean(np.power(px / 255.0, 6.0), axis=0), 1 / 6.0)
+    return (ill / max(float(ill.mean()), 1e-6)).astype(np.float32)
+
+
+def _scene_light_map(scene_bgr: np.ndarray) -> np.ndarray:
+    """Brightness falloff of the scene's light across the frame, from its surface only (objects would darken it).
+
+    Returned at the scene's resolution with a mean near 1, so it can be sampled over any window.
+    """
+    s = min(1.0, 400 / max(scene_bgr.shape[:2]))
+    small = cv2.resize(scene_bgr, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+    m = cv2.erode(_surface_mask(small, None), np.ones((5, 5), np.float32))
+    lum = small.astype(np.float32).mean(2)
+    sig = max(6.0, 0.06 * max(small.shape[:2]))
+    num = cv2.GaussianBlur(lum * m, (0, 0), sig)
+    den = cv2.GaussianBlur(m, (0, 0), sig)
+    L = num / np.maximum(den, 0.02)
+    L = np.where(den > 0.02, L, np.mean(lum))
+    L = L / max(float(np.mean(L)), 1e-3)
+    return cv2.resize(L, (scene_bgr.shape[1], scene_bgr.shape[0]), interpolation=cv2.INTER_LINEAR)
+
+
+def _cached(cache, key, fn):
+    if cache is None:
+        return fn()
+    if key not in cache:
+        cache[key] = fn()
+    return cache[key]
+
+
 def _object_arrays(cut: Cutout, H: int, W: int, sigma: float, cache):
     key = ("obj", H, round(sigma, 2))
     if cache is not None and key in cache:
@@ -185,6 +230,14 @@ def render(scene_bgr: np.ndarray, cut: Cutout, p: Params, scale: float = 1.0, ca
     ob = obj_black
     if ob is None:
         ob = cache.setdefault("obj_black", object_black(cut)) if cache is not None else object_black(cut)
+    if p.color_match > 0:
+        # The object was photographed under its own light; bringing its white balance toward the scene's is what
+        # stops a silver lid from staying cool in a warm room (or the reverse).
+        obj_ill = _cached(cache, ("obj_ill", id(cut)),
+                          lambda: _illuminant(cut.rgb[cut.alpha > 0.9] if (cut.alpha > 0.9).sum() > 200 else cut.rgb))
+        scene_ill = _cached(cache, ("scene_ill", Hs, Ws), lambda: _illuminant(scene_bgr[:, :, ::-1]))
+        corr = np.clip(scene_ill / np.maximum(obj_ill, 1e-3), 0.8, 1.25)
+        rgb = rgb * (1 + p.color_match * (corr - 1))[None, None, :]
     lift = np.clip(np.asarray(p.black_rgb, np.float32) - p.gain * ob, 0, 90)
     lum = rgb.mean(2, keepdims=True)
     dark = (1 - lum / 255.0) ** 3             # only dark areas are lifted, so the screen stays luminous
@@ -194,6 +247,16 @@ def render(scene_bgr: np.ndarray, cut: Cutout, p: Params, scale: float = 1.0, ca
 
     rim = np.exp(-inner / max(1.5, 0.0028 * oh)) * (0.25 + 0.9 * facing)
     rgb += rim[..., None] * (0.5 * surf) * p.rim * rim_k
+
+    if p.light_grad > 0:
+        # The scene's light is uneven across the frame; an object lit evenly looks pasted on, so it receives the same
+        # falloff. Only the variation across the object is applied, so its overall brightness stays as set.
+        lmap = _cached(cache, ("light_map", Hs, Ws), lambda: _scene_light_map(scene_bgr))
+        win_l = _grab(np.repeat(lmap[..., None], 3, 2), ox, oy, ox + ow, oy + oh)[..., 0]
+        inside = alpha > 0.5
+        if inside.any():
+            ratio = win_l / max(float(win_l[inside].mean()), 1e-3)
+            rgb = rgb * (1 + p.light_grad * (np.clip(ratio, 0.6, 1.5) - 1))[..., None]
 
     rgb = cv2.GaussianBlur(rgb, (0, 0), max(0.3, p.softness * S))
     rgb += rng.normal(0, p.grain, rgb.shape[:2])[..., None].astype(np.float32)

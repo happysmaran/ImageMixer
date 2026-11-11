@@ -283,3 +283,47 @@ def test_soft_extension_is_optional_and_never_raises():
     from flatlay import inpaint
     sc = textured_scene(200, 120)
     assert inpaint.soft_extension(sc, np.ones(sc.shape[:2], np.float32), 40) is None
+
+
+# ---- matching the scene's colour and light falloff ---------------------------------------------------
+def _warm_ramp_scene(w=900, h=600):
+    # Surface lit warmly and more strongly on the right, with a neutral grey block standing in for a grey object.
+    x = np.linspace(0.6, 1.2, w, dtype=np.float32)[None, :, None]
+    base = np.array([70, 120, 200], np.float32)                      # BGR: warm, orange-ish
+    img = np.repeat(np.repeat(base[None, None, :], h, 0), w, 1) * x
+    img[40:120, 40:140] = (110, 110, 110)
+    return np.clip(img, 0, 255).astype(np.uint8)
+
+
+def _grey_object(w=300, h=500):
+    rgb = np.full((h, w, 3), 150, np.uint8)
+    rgb[:, :, 2] = 140                                               # cool cast: slightly low red
+    alpha = np.zeros((h, w), np.float32)
+    cv2.rectangle(alpha, (6, 6), (w - 7, h - 7), 1.0, -1)
+    return Cutout(rgb=rgb, alpha=alpha, rect=(0, 0, w, h), source_size=(w, h))
+
+
+def _sess_for(scene, cut):
+    s = Session(scene, make_object())
+    s.cutout = cut
+    s.cache.clear()
+    return s
+
+
+def test_colour_match_pulls_a_cool_object_toward_a_warm_scene():
+    s = _sess_for(_warm_ramp_scene(), _grey_object())
+    p = place(s, cx=450, cy=330, height_px=300, side_faces=False, color_match=0.0, light_grad=0.0, shadow_strength=0.0, contact=0.0)
+    cold = s.render_full(p)[300:360, 430:470].astype(float).mean((0, 1))
+    p.color_match = 1.0
+    warm = s.render_full(p)[300:360, 430:470].astype(float).mean((0, 1))
+    assert (warm[2] - warm[0]) > (cold[2] - cold[0]) + 4               # more red relative to blue
+
+
+def test_light_falloff_is_laid_over_the_object():
+    s = _sess_for(_warm_ramp_scene(), _grey_object())
+    p = place(s, cx=450, cy=330, height_px=300, side_faces=False, color_match=0.0, light_grad=0.0, shadow_strength=0.0, contact=0.0)
+    flat = s.render_full(p).astype(float).mean(2)
+    p.light_grad = 1.0
+    graded = s.render_full(p).astype(float).mean(2)
+    span = lambda im: im[320:360, 520:540].mean() - im[320:360, 360:380].mean()   # right edge minus left edge of the object
+    assert abs(span(flat)) < 3 and span(graded) > span(flat) + 8

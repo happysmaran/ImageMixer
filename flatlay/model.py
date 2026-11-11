@@ -51,6 +51,10 @@ class Params:
     sheen: float = 1.0
     softness: float = 0.8              # px at full resolution, to match the scene's optics
     grain: float = 1.3
+    # How far to pull the object's white balance toward the scene's, and how much of the scene's own brightness
+    # falloff to lay over the object (0 = leave the object as photographed, 1 = full correction).
+    color_match: float = 0.5
+    light_grad: float = 0.6
     clear_edge_frac: float = 0.0       # translucent trim along the bottom edge, as a fraction of length
     # Surface finish scales how strongly sheen and rim light respond; "glass" switches to a see-through
     # placeholder because real refraction cannot be recovered from a single photo.
