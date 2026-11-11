@@ -217,8 +217,20 @@ bindSelect('#finish', 'finish');
 $('#standoffMm').addEventListener('input', (e) => { S.P.standoff_mm = Math.max(0, parseFloat(e.target.value) || 0); schedule(true); });
 $('#standoffMm').addEventListener('change', () => schedule());
 $('#flipH').addEventListener('change', (e) => { S.P.flip_h = e.target.checked; schedule(); });
-$('#lengthMm').addEventListener('input', (e) => { S.P.length_mm = Math.max(1, parseFloat(e.target.value) || 1); schedule(true); });
-$('#thickMm').addEventListener('input', (e) => { S.P.thickness_mm = Math.max(0.1, parseFloat(e.target.value) || 0.1); schedule(true); });
+// Typing a size means the object is no longer the chosen preset, and, like picking a preset, it takes that real
+// size on screen when the photo's scale is known. syncFields is skipped so a half-typed "0." is not rewritten.
+function customSizeEdited() {
+  S.deviceId = 'custom';
+  $('#device').value = 'custom';
+  if (S.pxPerMm) S.P.height_px = S.P.length_mm * S.pxPerMm;
+  syncers.forEach((f) => f());
+  positionOverlay();
+  schedule(true);
+}
+$('#lengthMm').addEventListener('input', (e) => { S.P.length_mm = Math.max(0.1, parseFloat(e.target.value) || 0.1); customSizeEdited(); });
+$('#thickMm').addEventListener('input', (e) => { S.P.thickness_mm = Math.max(0.1, parseFloat(e.target.value) || 0.1); customSizeEdited(); });
+$('#lengthMm').addEventListener('change', () => schedule());
+$('#thickMm').addEventListener('change', () => schedule());
 $('#sideFaces').addEventListener('change', (e) => { S.P.side_faces = e.target.checked; schedule(); });
 $('#material').addEventListener('change', (e) => { S.P.side_material = e.target.value; schedule(); });
 $('#applyReal').addEventListener('click', () => { S.P.height_px = S.P.length_mm * S.pxPerMm; syncAll(); schedule(); });
